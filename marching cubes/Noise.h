@@ -6,10 +6,11 @@ typedef unsigned int uint;
 class NoiseShader {
 private:
 public:
-	const int TEXTURE_SIZE = 33;
+	const int TEXTURE_SIZE = 65;
 	uint program;
 	uint texture;
 	float seed = 0.0f;
 	void draw();
-	void genTexture();
+	void createTexture();
+	void destroyTexture();
 };

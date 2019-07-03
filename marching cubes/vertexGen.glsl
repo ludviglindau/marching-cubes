@@ -31,6 +31,22 @@ layout(std430, binding = 3) readonly buffer TriangleTable
 };
 
 layout(binding = 0) uniform sampler3D noiseTexture;
+layout(location = 0) uniform float centerOffset;
+
+
+vec3 interpolateVertex(vec3 p1, vec3 p2, float val1, float val2) {
+    vec3 p;
+
+    if (abs(val1) < 0.00001)
+        return p1;
+    if (abs(val2) < 0.00001)
+        return p2;
+    if (abs(val1 - val2) < 0.00001)
+        return p1;
+    float mu = -val1 / (val2 - val1);
+    p = p1 + mu * (p2 - p1);
+    return p;
+}
 
 void main()
 {
@@ -71,54 +87,53 @@ void main()
 
 	vec3 vertexList[12] = vec3[12](0.0);
 	vec3 pos = vec3(p);
+
 	if (bool(edgeTable[cubeIndex] & 1))
-		vertexList[0] = mix(pos + offsets[0], pos + offsets[1], 0.5);
+		vertexList[0] = interpolateVertex(pos + offsets[0], pos + offsets[1], corners[0], corners[1]);
 	if (bool(edgeTable[cubeIndex] & 2))
-		vertexList[1] = mix(pos + offsets[1], pos + offsets[2], 0.5);
+		vertexList[1] = interpolateVertex(pos + offsets[1], pos + offsets[2], corners[1], corners[2]);
 	if (bool(edgeTable[cubeIndex] & 4))
-		vertexList[2] = mix(pos + offsets[2], pos + offsets[3], 0.5);
+		vertexList[2] = interpolateVertex(pos + offsets[2], pos + offsets[3], corners[2], corners[3]);
 	if (bool(edgeTable[cubeIndex] & 8))
-		vertexList[3] = mix(pos + offsets[3], pos + offsets[0], 0.5);
+		vertexList[3] = interpolateVertex(pos + offsets[3], pos + offsets[0], corners[3], corners[0]);
 	if (bool(edgeTable[cubeIndex] & 16))
-		vertexList[4] = mix(pos + offsets[4], pos + offsets[5], 0.5);
+		vertexList[4] = interpolateVertex(pos + offsets[4], pos + offsets[5], corners[4], corners[5]);
 	if (bool(edgeTable[cubeIndex] & 32))
-		vertexList[5] = mix(pos + offsets[5], pos + offsets[6], 0.5);
+		vertexList[5] = interpolateVertex(pos + offsets[5], pos + offsets[6], corners[5], corners[6]);
 	if (bool(edgeTable[cubeIndex] & 64))
-		vertexList[6] = mix(pos + offsets[6], pos + offsets[7], 0.5);
+		vertexList[6] = interpolateVertex(pos + offsets[6], pos + offsets[7], corners[6], corners[7]);
 	if (bool(edgeTable[cubeIndex] & 128))
-		vertexList[7] = mix(pos + offsets[7], pos + offsets[4], 0.5);
+		vertexList[7] = interpolateVertex(pos + offsets[7], pos + offsets[4], corners[7], corners[4]);
 	if (bool(edgeTable[cubeIndex] & 256))
-		vertexList[8] = mix(pos + offsets[0], pos + offsets[4], 0.5);
+		vertexList[8] = interpolateVertex(pos + offsets[0], pos + offsets[4], corners[0], corners[4]);
 	if (bool(edgeTable[cubeIndex] & 512))
-		vertexList[9] = mix(pos + offsets[1], pos + offsets[5], 0.5);
+		vertexList[9] = interpolateVertex(pos + offsets[1], pos + offsets[5], corners[1], corners[5]);
 	if (bool(edgeTable[cubeIndex] & 1024))
-		vertexList[10] = mix(pos + offsets[2], pos + offsets[6], 0.5);
+		vertexList[10] = interpolateVertex(pos + offsets[2], pos + offsets[6], corners[2], corners[6]);
 	if (bool(edgeTable[cubeIndex] & 2048))
-		vertexList[11] = mix(pos + offsets[3], pos + offsets[7], 0.5);
+		vertexList[11] = interpolateVertex(pos + offsets[3], pos + offsets[7], corners[3], corners[7]);
+
+
 
 	Triangle triangleList[5];
 	int triangleCounter = 0;
 	for (int i = 0; triTable[cubeIndex][i] != -1; i += 3)
 	{
-        vec3 v1 = vertexList[triTable[cubeIndex][i]];
-        vec3 v2 = vertexList[triTable[cubeIndex][i+1]];
-        vec3 v3 = vertexList[triTable[cubeIndex][i+2]];
+        vec3 v1 = vertexList[triTable[cubeIndex][i]] - centerOffset;
+        vec3 v2 = vertexList[triTable[cubeIndex][i+1]] - centerOffset;
+        vec3 v3 = vertexList[triTable[cubeIndex][i+2]] - centerOffset;
 
 		triangleList[triangleCounter].v1 = vec4(v1, 1.0);
 		triangleList[triangleCounter].v2 = vec4(v2, 1.0);
 		triangleList[triangleCounter].v3 = vec4(v3, 1.0);
 
-        //triangleList[triangleCounter].n1 = vec4(texture(noiseTexture, triangleList[triangleCounter].v1.xyz).yzw, 0.0);
-        //triangleList[triangleCounter].n2 = vec4(texture(noiseTexture, triangleList[triangleCounter].v2.xyz).yzw, 0.0);
-        //triangleList[triangleCounter].n3 = vec4(texture(noiseTexture, triangleList[triangleCounter].v3.xyz).yzw, 0.0);
+        //triangleList[triangleCounter].n1 = vec4(texture(noiseTexture, v1).gba, 0.0);
+        //triangleList[triangleCounter].n2 = vec4(texture(noiseTexture, v2).gba, 0.0);
+        //triangleList[triangleCounter].n3 = vec4(texture(noiseTexture, v3).gba, 0.0);
 
         triangleList[triangleCounter].n1 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
         triangleList[triangleCounter].n2 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
         triangleList[triangleCounter].n3 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
-
-        //triangleList[triangleCounter].n1 = vec4(1.0, 0.0, 0.0, 0.0);
-        //triangleList[triangleCounter].n2 = vec4(0.0, 1.0, 0.0, 0.0);
-        //triangleList[triangleCounter].n3 = vec4(0.0, 0.0, 1.0, 0.0);
 
 		triangleCounter++;
 	}

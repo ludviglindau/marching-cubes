@@ -1,16 +1,17 @@
 #version 460
-layout(local_size_x = 3, local_size_y = 3, local_size_z = 3) in;
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 layout(rgba32f, binding = 0) uniform image3D outTexture;
 
 layout(location = 0) uniform float seed;
 layout(location = 1) uniform float time;
+layout(location = 2) uniform float texels;
 
 vec3 random3(vec3 p)
 {
     p = vec3(dot(p, vec3(905.0, 311.365, 320.79)),
               dot(p, vec3(684.63, 866.28, 95.22144554)),
               dot(p, vec3(174.62, 544.25, 151.8542)));
-    return -1.0 + 2.0 * fract(sin(p) * 12583.3602648 * seed);
+    return -1.0 + 2.0 * fract(sin(p) * 12583.3602648 + (seed * seed * seed));
 }
 
 float noise(vec3 p)
@@ -43,12 +44,13 @@ float noise(vec3 p)
 
 float fbm(vec3 p)
 {
-	float value = p.y - 0.75;
+	float value = p.y - 0.05;
+	//value = 0.05 - exp(-length(p - texels * 0.5));
 
     value += noise(p);
-    value += noise(p*2.0) * 0.504;
-    value += noise(p*4.0) * 0.249;
-	value += noise(p*8.0) * 0.1246;
+    value += noise(p*2.0) * 0.5;
+    value += noise(p*4.0) * 0.25;
+	value += noise(p*8.0) * 0.125;
 
 	return value;
 }
@@ -67,9 +69,10 @@ vec3 calcNormal(vec3 p)
 void main()
 {
 	vec3 p = gl_GlobalInvocationID.xyz;
-	vec3 noiseInput = (p*2.0) / 33.0;
+	vec3 noiseInput = (p) / (texels * 0.5);
 	float density = fbm(noiseInput);
+	//density = length(p - vec3(32.0)) - 5.5;
 	vec3 normal = calcNormal(noiseInput);
-
+	//normal = normalize(p-vec3(32.0));
 	imageStore(outTexture, ivec3(p), vec4(density, normal.x, normal.y, normal.z));
 }

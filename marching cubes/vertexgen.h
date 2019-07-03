@@ -5,7 +5,7 @@ typedef unsigned int uint;
 class VertexGenShader {
 private:
 public:
-	uint voxels = 32 * 32;
+	uint voxelRows;
 	uint program;
 	uint noiseTexture;
 	uint vertexBuffer;
@@ -14,5 +14,7 @@ public:
 	uint triangleTableBuffer;
 	uint vertexArray;
 	void draw();
-	void genBuffers();
+	void createBuffers();
+	void destroyBuffers();
+	uint getNumberOfTriangles();
 };

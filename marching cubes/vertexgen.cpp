@@ -28,17 +28,19 @@ void VertexGenShader::draw()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, noiseTexture);
 
-	glDispatchCompute(8, 8, 8);
+	glUniform1f(0, voxelRows * 0.5f);
+
+	glDispatchCompute(voxelRows / 4, voxelRows / 4, voxelRows / 4);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 }
 
-void VertexGenShader::genBuffers()
+void VertexGenShader::createBuffers()
 {
 	uint index = 0;
 	glGenBuffers(1, &vertexBuffer);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, vertexBuffer);
 	uint triangleSize = sizeof(glm::vec4) * 6;
-	glBufferData(GL_SHADER_STORAGE_BUFFER, voxels * triangleSize * 10, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, voxelRows * voxelRows * triangleSize * 10, nullptr, GL_DYNAMIC_DRAW);
 	index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, "TriangleBuffer");
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, vertexBuffer);
 
@@ -69,4 +71,18 @@ void VertexGenShader::genBuffers()
 
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(glm::vec4) * 2, (void*)(sizeof(glm::vec4)));
+}
+
+void VertexGenShader::destroyBuffers() {
+	glDeleteBuffers(1, &counterBuffer);
+	glDeleteBuffers(1, &vertexBuffer);
+	glDeleteBuffers(1, &edgeTableBuffer);
+	glDeleteBuffers(1, &triangleTableBuffer);
+	glDeleteVertexArrays(1, &vertexArray);
+}
+
+uint VertexGenShader::getNumberOfTriangles() {
+	uint data = 0;
+	glGetNamedBufferSubData(counterBuffer, 0, sizeof(uint), &data);
+	return data;
 }

@@ -11,11 +11,12 @@ void NoiseShader::draw()
 	glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 	glUniform1f(0, seed);
 	glUniform1f(1, glfwGetTime());
-	glDispatchCompute(11, 11, 11);
+	glUniform1f(2, TEXTURE_SIZE);
+	glDispatchCompute(TEXTURE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 }
 
-void NoiseShader::genTexture()
+void NoiseShader::createTexture()
 {
 	glGenTextures(1, &texture);
 	glActiveTexture(GL_TEXTURE0);
@@ -23,5 +24,9 @@ void NoiseShader::genTexture()
 	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, TEXTURE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE, 0, GL_RGBA, GL_FLOAT, 0);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}
 
+void NoiseShader::destroyTexture()
+{
+	glDeleteTextures(1, &texture);
 }

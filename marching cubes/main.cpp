@@ -28,9 +28,25 @@ GLFWwindow* window;
 const int WINDOW_WIDTH = 1600;
 const int WINDOW_HEIGHT = 900;
 
+bool wireframeMode = false;
+
+struct Camera {
+	glm::vec2 rotation = glm::vec2(0.0);
+	float distance = 100.0f;
+} camera;
+
+
+glm::vec3 translate;
+glm::vec3 scale = glm::vec3(1.0, 1.0, 1.0);
+glm::vec3 rotationAxis = glm::vec3(0.0, 1.0, 0.0);
+float rotationAngle = 0.f;
+glm::mat4 world = glm::mat4(1.0);
+glm::mat4 view = glm::mat4(1.0);
+glm::mat4 projection = glm::perspective(3.14159f, 16.f / 9.f, 0.1f, 1000.0f);
+
 void initWindow();
-
-
+void updateWorldMatrix(glm::vec3 chunkLength);
+void updateViewMatrix();
 void GLAPIENTRY
 MessageCallback(
 	GLenum source,
@@ -45,24 +61,30 @@ int main()
 {
 	initWindow();
 	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_BACK);
+	glFrontFace(GL_CW);
 	
-
 	NoiseShader noiseShader;
 	createComputeShader(noiseShader.program, "noise.glsl");
-	noiseShader.genTexture();
+	noiseShader.createTexture();
 	glfwPollEvents();
 	noiseShader.draw();
 	
 	VertexGenShader vertexGenShader;
 	vertexGenShader.noiseTexture = noiseShader.texture;
 	createComputeShader(vertexGenShader.program, "vertexGen.glsl");
-	vertexGenShader.genBuffers();
+	vertexGenShader.createBuffers();
+	vertexGenShader.voxelRows = (noiseShader.TEXTURE_SIZE - 1);
 	vertexGenShader.draw();
 
 	Renderer renderer;
 	createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");
-	renderer.triangles = vertexGenShader.voxels * sizeof(glm::vec3) * 6 * 10;
+	renderer.triangles = vertexGenShader.getNumberOfTriangles();
+	translate = glm::vec3(0.0);
+
+	
+	view = glm::lookAt(glm::vec3(0.0, 0.0, 100.0), glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -73,30 +95,46 @@ int main()
 			createComputeShader(vertexGenShader.program, "vertexGen.glsl");
 
 			createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");
+			noiseShader.draw();
+			vertexGenShader.draw();
+			renderer.triangles = vertexGenShader.getNumberOfTriangles();
 		}
 		if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-			renderer.rotationAngle -= 0.01f;
+			camera.rotation.x -= 0.01f;
 		}
 		if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-			renderer.rotationAngle += 0.01f;
+			camera.rotation.x += 0.01f;
 		}
 		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-			renderer.scale += 0.1f;
+			camera.rotation.y = glm::clamp(camera.rotation.y + 0.01f, -1.62f, 1.62f);
 		}
 		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-			renderer.scale -= 0.1f;
+			camera.rotation.y = glm::clamp(camera.rotation.y - 0.01f, -1.62f, 1.62f);
+		}
+		if (glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
+			camera.distance += 0.5f;
+		}
+		if (glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS) {
+			camera.distance -= 0.5f;
 		}
 		if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			wireframeMode = !wireframeMode;
+			if (wireframeMode) {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			}
+			else {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
 		}
 
-		noiseShader.draw();
-		vertexGenShader.draw();
-
-		renderer.draw(vertexGenShader.vertexArray);
+		updateWorldMatrix(glm::vec3(vertexGenShader.voxelRows));
+		updateViewMatrix();
+		renderer.draw(vertexGenShader.vertexArray, world, view);
 		glfwSwapBuffers(window);
 	}
-
+	
+	noiseShader.destroyTexture();
+	vertexGenShader.destroyBuffers();
 	glfwTerminate();
 	return 0;
 }
@@ -121,7 +159,7 @@ void initWindow()
 
 	glfwMakeContextCurrent(window);
 	glewExperimental = GL_TRUE;
-	glfwSwapInterval(1);
+	glfwSwapInterval(0);
 
 	GLenum err = glewInit();
 	if (GLEW_OK != err)
@@ -140,6 +178,23 @@ void initWindow()
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glDebugMessageCallback(MessageCallback, 0);
+}
+
+void updateWorldMatrix(glm::vec3 chunkLength) {
+	world = glm::mat4(1.0);
+	world = glm::translate(world, translate);
+	world = glm::scale(world, scale);
+
+	world = glm::translate(world, chunkLength * 0.5f);
+	world = glm::rotate(world, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+	world = glm::translate(world, -chunkLength * 0.5f);
+}
+
+void updateViewMatrix() {
+	view = glm::mat4(1.0);
+	view = glm::translate(view, glm::vec3(0.0, 0.0, -camera.distance));
+	view = glm::rotate(view, camera.rotation.y, glm::vec3(1.0, 0.0, 0.0));
+	view = glm::rotate(view, camera.rotation.x, glm::vec3(0.0, 1.0, 0.0));
 }
 
 void GLAPIENTRY
