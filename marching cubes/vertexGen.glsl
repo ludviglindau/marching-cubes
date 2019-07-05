@@ -1,5 +1,5 @@
 #version 460
-layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 struct Triangle {
 	vec4 v1;
@@ -31,8 +31,8 @@ layout(std430, binding = 3) readonly buffer TriangleTable
 };
 
 layout(binding = 0) uniform sampler3D noiseTexture;
-layout(location = 0) uniform float centerOffset;
-
+layout(location = 0) uniform float voxelDim;
+layout(location = 1) uniform ivec3 chunk;
 
 vec3 interpolateVertex(vec3 p1, vec3 p2, float val1, float val2) {
     vec3 p;
@@ -119,26 +119,51 @@ void main()
 	int triangleCounter = 0;
 	for (int i = 0; triTable[cubeIndex][i] != -1; i += 3)
 	{
-        vec3 v1 = vertexList[triTable[cubeIndex][i]] - centerOffset;
-        vec3 v2 = vertexList[triTable[cubeIndex][i+1]] - centerOffset;
-        vec3 v3 = vertexList[triTable[cubeIndex][i+2]] - centerOffset;
+        vec3 v1 = vertexList[triTable[cubeIndex][i]]   - (voxelDim * 0.5);
+        vec3 v2 = vertexList[triTable[cubeIndex][i+1]] - (voxelDim * 0.5);
+        vec3 v3 = vertexList[triTable[cubeIndex][i+2]] - (voxelDim * 0.5);
 
-		triangleList[triangleCounter].v1 = vec4(v1, 1.0);
-		triangleList[triangleCounter].v2 = vec4(v2, 1.0);
-		triangleList[triangleCounter].v3 = vec4(v3, 1.0);
+		triangleList[triangleCounter].v1 = vec4(v1 + (chunk * voxelDim), 1.0);
+		triangleList[triangleCounter].v2 = vec4(v2 + (chunk * voxelDim), 1.0);
+		triangleList[triangleCounter].v3 = vec4(v3 + (chunk * voxelDim), 1.0);
 
-        //triangleList[triangleCounter].n1 = vec4(texture(noiseTexture, v1).gba, 0.0);
-        //triangleList[triangleCounter].n2 = vec4(texture(noiseTexture, v2).gba, 0.0);
-        //triangleList[triangleCounter].n3 = vec4(texture(noiseTexture, v3).gba, 0.0);
+        //triangleList[triangleCounter].n1 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
+        //triangleList[triangleCounter].n2 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
+        //triangleList[triangleCounter].n3 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
 
-        triangleList[triangleCounter].n1 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
-        triangleList[triangleCounter].n2 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
-        triangleList[triangleCounter].n3 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
+        v1 += voxelDim * 0.5;
+        v2 += voxelDim * 0.5;
+        v3 += voxelDim * 0.5;
+
+        //vec2 eps = vec2(0.01, 0.0);
+        //
+        //vec3 n1 = vec3(texture(noiseTexture, v1/voxelDim + eps.xyy).r - texture(noiseTexture, v1/voxelDim - eps.xyy).r,
+        //               texture(noiseTexture, v1/voxelDim + eps.yxy).r - texture(noiseTexture, v1/voxelDim - eps.yxy).r,
+        //               texture(noiseTexture, v1/voxelDim + eps.yyx).r - texture(noiseTexture, v1/voxelDim - eps.yyx).r);
+        //n1 = normalize(n1);
+        //
+        //vec3 n2 = vec3(texture(noiseTexture, v2/voxelDim + eps.xyy).r - texture(noiseTexture, v2/voxelDim - eps.xyy).r,
+        //               texture(noiseTexture, v2/voxelDim + eps.yxy).r - texture(noiseTexture, v2/voxelDim - eps.yxy).r,
+        //               texture(noiseTexture, v2/voxelDim + eps.yyx).r - texture(noiseTexture, v2/voxelDim - eps.yyx).r);
+        //n2 = normalize(n2);
+        //
+        //vec3 n3 = vec3(texture(noiseTexture, v3/voxelDim + eps.xyy).r - texture(noiseTexture, v3/voxelDim - eps.xyy).r,
+        //               texture(noiseTexture, v3/voxelDim + eps.yxy).r - texture(noiseTexture, v3/voxelDim - eps.yxy).r,
+        //               texture(noiseTexture, v3/voxelDim + eps.yyx).r - texture(noiseTexture, v3/voxelDim - eps.yyx).r);
+        //n3 = normalize(n3);
+        //
+        //triangleList[triangleCounter].n1 = vec4(n1, 0.0);
+        //triangleList[triangleCounter].n2 = vec4(n2, 0.0);
+        //triangleList[triangleCounter].n3 = vec4(n3, 0.0);
+            
+        triangleList[triangleCounter].n1 = vec4(texture(noiseTexture, v1/voxelDim).gba * 1.0, 0.0);
+        triangleList[triangleCounter].n2 = vec4(texture(noiseTexture, v2/voxelDim).gba * 1.0, 0.0);
+        triangleList[triangleCounter].n3 = vec4(texture(noiseTexture, v3/voxelDim).gba * 1.0, 0.0);
 
 		triangleCounter++;
 	}
    
-    //memoryBarrier();
+    memoryBarrier();
 	uint vboIndex = atomicAdd(counter[0], triangleCounter);
     
 	for (int i = 0; i < triangleCounter; ++i)

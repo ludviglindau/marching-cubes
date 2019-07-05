@@ -1,11 +1,12 @@
 #pragma once
+#include "../glm/glm.hpp"
 
 typedef unsigned int uint;
 
 class VertexGenShader {
 private:
 public:
-	uint voxelRows;
+	uint voxelDim;
 	uint program;
 	uint noiseTexture;
 	uint vertexBuffer;
@@ -13,7 +14,7 @@ public:
 	uint edgeTableBuffer;
 	uint triangleTableBuffer;
 	uint vertexArray;
-	void draw();
+	void draw(glm::ivec3 chunk);
 	void createBuffers();
 	void destroyBuffers();
 	uint getNumberOfTriangles();

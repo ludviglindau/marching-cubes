@@ -1,9 +1,9 @@
 #include "vertexgen.h"
 #include "../glew/include/GL/glew.h"
-#include "../glm/ext/vector_float4.hpp"
+#include "../glm/gtc/type_ptr.hpp"
 #include "tables.cpp"
 
-void VertexGenShader::draw()
+void VertexGenShader::draw(glm::ivec3 chunk)
 {
 	glUseProgram(program);
 	// reset counter
@@ -28,9 +28,10 @@ void VertexGenShader::draw()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, noiseTexture);
 
-	glUniform1f(0, voxelRows * 0.5f);
+	glUniform1f(0, voxelDim);
+	glUniform3iv(1, 1, glm::value_ptr(chunk));
 
-	glDispatchCompute(voxelRows / 4, voxelRows / 4, voxelRows / 4);
+	glDispatchCompute(voxelDim / 8, voxelDim / 8, voxelDim / 8);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 }
 
@@ -40,7 +41,7 @@ void VertexGenShader::createBuffers()
 	glGenBuffers(1, &vertexBuffer);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, vertexBuffer);
 	uint triangleSize = sizeof(glm::vec4) * 6;
-	glBufferData(GL_SHADER_STORAGE_BUFFER, voxelRows * voxelRows * triangleSize * 10, nullptr, GL_DYNAMIC_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, voxelDim * voxelDim * voxelDim * triangleSize * 5, nullptr, GL_DYNAMIC_DRAW);
 	index = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, "TriangleBuffer");
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, vertexBuffer);
 

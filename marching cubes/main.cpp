@@ -31,7 +31,7 @@ const int WINDOW_HEIGHT = 900;
 bool wireframeMode = false;
 
 struct Camera {
-	glm::vec2 rotation = glm::vec2(0.0);
+	glm::vec2 rotation = glm::vec2(0.0f, 0.0f);
 	float distance = 100.0f;
 } camera;
 
@@ -69,23 +69,30 @@ int main()
 	createComputeShader(noiseShader.program, "noise.glsl");
 	noiseShader.createTexture();
 	glfwPollEvents();
-	noiseShader.draw();
+	noiseShader.draw(glm::vec3(0.0, 0.0, 0.0));
 	
 	VertexGenShader vertexGenShader;
 	vertexGenShader.noiseTexture = noiseShader.texture;
 	createComputeShader(vertexGenShader.program, "vertexGen.glsl");
+	vertexGenShader.voxelDim = (noiseShader.TEXTURE_SIZE - 1);
 	vertexGenShader.createBuffers();
-	vertexGenShader.voxelRows = (noiseShader.TEXTURE_SIZE - 1);
-	vertexGenShader.draw();
+	vertexGenShader.draw(glm::vec3(0.0, 0.0, 0.0));
+
+	noiseShader.draw(glm::vec3(0.0, -1.0, 0.0));
+	VertexGenShader vertexGenShader2;
+	vertexGenShader2.noiseTexture = noiseShader.texture;
+	vertexGenShader2.program = vertexGenShader.program;
+	vertexGenShader2.voxelDim = (noiseShader.TEXTURE_SIZE - 1);
+	vertexGenShader2.createBuffers();
+	vertexGenShader2.draw(glm::vec3(0.0, -1.0, 0.0));
 
 	Renderer renderer;
 	createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");
 	renderer.triangles = vertexGenShader.getNumberOfTriangles();
-	translate = glm::vec3(0.0);
-
-	
+	translate = glm::vec3(0.0);	
 	view = glm::lookAt(glm::vec3(0.0, 0.0, 100.0), glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
 
+	
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
@@ -93,11 +100,14 @@ int main()
 			createComputeShader(noiseShader.program, "noise.glsl");
 
 			createComputeShader(vertexGenShader.program, "vertexGen.glsl");
+			vertexGenShader2.program = vertexGenShader.program;
 
 			createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");
-			noiseShader.draw();
-			vertexGenShader.draw();
-			renderer.triangles = vertexGenShader.getNumberOfTriangles();
+			
+			noiseShader.draw(glm::vec3(0.0, 0.0, 0.0));
+			vertexGenShader.draw(glm::vec3(0.0, 0.0, 0.0));
+			noiseShader.draw(glm::vec3(0.0, -1.0, 0.0));
+			vertexGenShader2.draw(glm::vec3(0.0, -1.0, 0.0));
 		}
 		if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
 			camera.rotation.x -= 0.01f;
@@ -127,9 +137,25 @@ int main()
 			}
 		}
 
-		updateWorldMatrix(glm::vec3(vertexGenShader.voxelRows));
+		renderer.clear();
+
+		//noiseShader.draw(glm::vec3(0.0, 0.0, 0.0));
+		//vertexGenShader.draw();
+		translate = glm::vec3(0.0);
+		updateWorldMatrix(glm::vec3(vertexGenShader.voxelDim));
 		updateViewMatrix();
+		renderer.triangles = vertexGenShader.getNumberOfTriangles();
 		renderer.draw(vertexGenShader.vertexArray, world, view);
+
+
+		//noiseShader.draw(glm::vec3(0.0, -1.0, 0.0));
+		//vertexGenShader.draw();
+		translate = glm::vec3(0.0, -(noiseShader.TEXTURE_SIZE - 1), 0.0) * scale;
+		renderer.triangles = vertexGenShader2.getNumberOfTriangles();
+		updateWorldMatrix(glm::vec3(vertexGenShader2.voxelDim));
+		renderer.draw(vertexGenShader2.vertexArray, world, view);
+
+
 		glfwSwapBuffers(window);
 	}
 	
