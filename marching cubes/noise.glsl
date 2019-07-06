@@ -76,7 +76,7 @@ vec4 noise(vec3 p)
 
 vec4 fbm(vec3 p)
 {
-	p *= 1.5;
+	p *= 0.5;
 	vec4 value = vec4(p.y * 0.5, 0.0, 0.00001, 0.0);
 	mat3 rotate = mat3(cos(0.0), 0.0, sin(0.0),
 					   0.0     , 1.0, 0.0,
@@ -106,7 +106,5 @@ void main()
 	vec4 density = fbm(noiseInput);
 	//vec4 density = vec4(length(p - vec3(16.f)) - 16.f, 0.f, 0.f, 0.f);
 	//density.yzw = vec3(p - vec3(-16.f));
-	//density.x = (density.x - 0.4) * 0.7;
-	//density.yzw = normalize(density.yzw);
 	imageStore(outTexture, ivec3(p), density);
 }

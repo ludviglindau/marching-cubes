@@ -28,16 +28,16 @@ GLFWwindow* window;
 
 const int WINDOW_WIDTH = 1600;
 const int WINDOW_HEIGHT = 900;
-const int chunkRows = 10;
-const int chunkRowStart = -8;
-const int chunkCols = 3;
-const int chunkColStart = -1;
+const int chunkRows = 12;
+const int chunkRowStart = -6;
+const int chunkCols = 7;
+const int chunkColStart = -3;
 
 bool wireframeMode = false;
 
 struct Camera {
 	glm::vec2 rotation = glm::vec2(0.0f, 0.0f);
-	float distance = 100.0f;
+	float distance = 1000.0f;
 } camera;
 
 glm::mat4 view = glm::mat4(1.0);
@@ -98,7 +98,7 @@ int main()
 					noiseShaders[(col * (chunkRows*chunkRows)) + row].draw(glm::vec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart));
 				}
 			}
-			vertexGenShader.triangleCounts = std::unordered_map<glm::ivec3, uint, KeyHash>();
+			vertexGenShader.chunkRenderInfos = std::unordered_map<glm::ivec3, ChunkRenderInfo, KeyHash>();
 			createComputeShader(vertexGenShader.program, "vertexGen.glsl");
 
 			createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");			
@@ -136,11 +136,16 @@ int main()
 		
 		for (int col = 0; col < chunkCols; ++col) {
 			for (int row = 0; row < chunkRows*chunkRows; row++) {
-				vertexGenShader.noiseTexture = noiseShaders[(col * (chunkRows*chunkRows)) + row].texture;
 				glm::ivec3 chunk = glm::ivec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart);
-				vertexGenShader.draw(chunk);
-				renderer.triangles = vertexGenShader.triangleCounts[chunk];
-				renderer.draw(vertexGenShader.vertexArray, view);
+				ChunkRenderInfo& chunkRenderInfo = vertexGenShader.chunkRenderInfos[chunk];
+				if (chunkRenderInfo.invalid) {
+					vertexGenShader.noiseTexture = noiseShaders[(col * (chunkRows*chunkRows)) + row].texture;
+					vertexGenShader.draw(chunk);
+					//noiseShaders[(col * (chunkRows*chunkRows)) + row].destroyTexture();
+				}
+				renderer.triangles = chunkRenderInfo.triangleCount;
+				glBindBuffer(GL_SHADER_STORAGE_BUFFER, chunkRenderInfo.vertexBuffer);
+				renderer.draw(chunkRenderInfo.vertexArray, view);
 			}
 		}
 

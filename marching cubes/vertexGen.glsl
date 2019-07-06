@@ -127,10 +127,6 @@ void main()
 		triangleList[triangleCounter].v2 = vec4(v2 + (chunk * voxelDim), 1.0) * scale;
 		triangleList[triangleCounter].v3 = vec4(v3 + (chunk * voxelDim), 1.0) * scale;
 
-        //triangleList[triangleCounter].n1 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
-        //triangleList[triangleCounter].n2 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
-        //triangleList[triangleCounter].n3 = vec4(cross(v3.xyz - v1.xyz, v2.xyz - v1.xyz), 0.0);
-
         v1 += voxelDim * 0.5;
         v2 += voxelDim * 0.5;
         v3 += voxelDim * 0.5;

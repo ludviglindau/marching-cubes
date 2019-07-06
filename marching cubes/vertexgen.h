@@ -22,8 +22,10 @@ public:
 	uint triangleCount = 0;
 	uint vertexBuffer = UINT_MAX;
 	uint vertexArray = UINT_MAX;
-	bool valid = false;
-	void createVertexBuffer(uint voxelDim);
+	bool invalid = true;
+	void createBuffers(uint voxelDim);
+	void resizeBuffer();
+	void deleteBuffers();
 	~ChunkRenderInfo();
 };
 
@@ -33,14 +35,12 @@ public:
 	uint voxelDim;
 	uint program;
 	uint noiseTexture;
-	uint vertexBuffer;
 	uint counterBuffer;
 	uint edgeTableBuffer;
 	uint triangleTableBuffer;
-	uint vertexArray;
 	uint nrOfTriangles = 0;
-	std::unordered_map<glm::ivec3, uint, KeyHash> triangleCounts;
-	float scale = 1.0;
+	std::unordered_map<glm::ivec3, ChunkRenderInfo, KeyHash> chunkRenderInfos;
+	float scale = 2.0;
 	void draw(glm::ivec3 chunk);
 	void createBuffers();
 	void destroyBuffers();
