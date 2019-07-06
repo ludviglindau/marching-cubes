@@ -16,6 +16,7 @@
 #include "rendering.h"
 
 #include <stdio.h>
+#include <vector>
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glew32.lib")
@@ -27,6 +28,10 @@ GLFWwindow* window;
 
 const int WINDOW_WIDTH = 1600;
 const int WINDOW_HEIGHT = 900;
+const int chunkRows = 10;
+const int chunkRowStart = -8;
+const int chunkCols = 3;
+const int chunkColStart = -1;
 
 bool wireframeMode = false;
 
@@ -35,17 +40,9 @@ struct Camera {
 	float distance = 100.0f;
 } camera;
 
-
-glm::vec3 translate;
-glm::vec3 scale = glm::vec3(1.0, 1.0, 1.0);
-glm::vec3 rotationAxis = glm::vec3(0.0, 1.0, 0.0);
-float rotationAngle = 0.f;
-glm::mat4 world = glm::mat4(1.0);
 glm::mat4 view = glm::mat4(1.0);
-glm::mat4 projection = glm::perspective(3.14159f, 16.f / 9.f, 0.1f, 1000.0f);
 
 void initWindow();
-void updateWorldMatrix(glm::vec3 chunkLength);
 void updateViewMatrix();
 void GLAPIENTRY
 MessageCallback(
@@ -64,50 +61,47 @@ int main()
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CW);
-	
-	NoiseShader noiseShader;
-	createComputeShader(noiseShader.program, "noise.glsl");
-	noiseShader.createTexture();
-	glfwPollEvents();
-	noiseShader.draw(glm::vec3(0.0, 0.0, 0.0));
+
+	std::vector<NoiseShader> noiseShaders;
+	noiseShaders.resize(chunkCols * chunkRows*chunkRows);
+	createComputeShader(noiseShaders[0].program, "noise.glsl");
+
+	for (int col = 0; col < chunkCols; ++col) {
+		for (int row = 0; row < chunkRows*chunkRows; ++row) {
+			noiseShaders[(col * (chunkRows*chunkRows)) + row].program = noiseShaders[0].program;
+			noiseShaders[(col * (chunkRows*chunkRows)) + row].createTexture();
+			noiseShaders[(col * (chunkRows*chunkRows)) + row].draw(glm::vec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart));
+		}
+	}
 	
 	VertexGenShader vertexGenShader;
-	vertexGenShader.noiseTexture = noiseShader.texture;
 	createComputeShader(vertexGenShader.program, "vertexGen.glsl");
-	vertexGenShader.voxelDim = (noiseShader.TEXTURE_SIZE - 1);
+	vertexGenShader.voxelDim = (NoiseShader::TEXTURE_SIZE - 1);
 	vertexGenShader.createBuffers();
-	vertexGenShader.draw(glm::vec3(0.0, 0.0, 0.0));
-
-	noiseShader.draw(glm::vec3(0.0, -1.0, 0.0));
-	VertexGenShader vertexGenShader2;
-	vertexGenShader2.noiseTexture = noiseShader.texture;
-	vertexGenShader2.program = vertexGenShader.program;
-	vertexGenShader2.voxelDim = (noiseShader.TEXTURE_SIZE - 1);
-	vertexGenShader2.createBuffers();
-	vertexGenShader2.draw(glm::vec3(0.0, -1.0, 0.0));
 
 	Renderer renderer;
 	createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");
-	renderer.triangles = vertexGenShader.getNumberOfTriangles();
-	translate = glm::vec3(0.0);	
+	renderer.triangles = vertexGenShader.nrOfTriangles;
 	view = glm::lookAt(glm::vec3(0.0, 0.0, 100.0), glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
 
 	
 	while (!glfwWindowShouldClose(window))
 	{
+		glfwSetTime(0.0);
 		glfwPollEvents();
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-			createComputeShader(noiseShader.program, "noise.glsl");
+			createComputeShader(noiseShaders[0].program, "noise.glsl");
 
+			for (int col = 0; col < chunkCols; ++col) {
+				for (int row = 0; row < chunkRows*chunkRows; ++row) {
+					noiseShaders[(col * (chunkRows*chunkRows)) + row].program = noiseShaders[0].program;
+					noiseShaders[(col * (chunkRows*chunkRows)) + row].draw(glm::vec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart));
+				}
+			}
+			vertexGenShader.triangleCounts = std::unordered_map<glm::ivec3, uint, KeyHash>();
 			createComputeShader(vertexGenShader.program, "vertexGen.glsl");
-			vertexGenShader2.program = vertexGenShader.program;
 
-			createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");
-			
-			noiseShader.draw(glm::vec3(0.0, 0.0, 0.0));
-			vertexGenShader.draw(glm::vec3(0.0, 0.0, 0.0));
-			noiseShader.draw(glm::vec3(0.0, -1.0, 0.0));
-			vertexGenShader2.draw(glm::vec3(0.0, -1.0, 0.0));
+			createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");			
 		}
 		if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
 			camera.rotation.x -= 0.01f;
@@ -138,28 +132,27 @@ int main()
 		}
 
 		renderer.clear();
-
-		//noiseShader.draw(glm::vec3(0.0, 0.0, 0.0));
-		//vertexGenShader.draw();
-		translate = glm::vec3(0.0);
-		updateWorldMatrix(glm::vec3(vertexGenShader.voxelDim));
 		updateViewMatrix();
-		renderer.triangles = vertexGenShader.getNumberOfTriangles();
-		renderer.draw(vertexGenShader.vertexArray, world, view);
-
-
-		//noiseShader.draw(glm::vec3(0.0, -1.0, 0.0));
-		//vertexGenShader.draw();
-		translate = glm::vec3(0.0, -(noiseShader.TEXTURE_SIZE - 1), 0.0) * scale;
-		renderer.triangles = vertexGenShader2.getNumberOfTriangles();
-		updateWorldMatrix(glm::vec3(vertexGenShader2.voxelDim));
-		renderer.draw(vertexGenShader2.vertexArray, world, view);
-
+		
+		for (int col = 0; col < chunkCols; ++col) {
+			for (int row = 0; row < chunkRows*chunkRows; row++) {
+				vertexGenShader.noiseTexture = noiseShaders[(col * (chunkRows*chunkRows)) + row].texture;
+				glm::ivec3 chunk = glm::ivec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart);
+				vertexGenShader.draw(chunk);
+				renderer.triangles = vertexGenShader.triangleCounts[chunk];
+				renderer.draw(vertexGenShader.vertexArray, view);
+			}
+		}
 
 		glfwSwapBuffers(window);
+		char title[40];
+		sprintf_s(title, 40, "%.3f ms", glfwGetTime()*1000);
+		glfwSetWindowTitle(window, title);
 	}
 	
-	noiseShader.destroyTexture();
+	for (int i = 0; i < 16; i++) {
+		noiseShaders[i].destroyTexture();
+	}
 	vertexGenShader.destroyBuffers();
 	glfwTerminate();
 	return 0;
@@ -171,7 +164,7 @@ void initWindow()
 		exit(EXIT_FAILURE);
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
@@ -202,18 +195,10 @@ void initWindow()
 	glClearDepth(1.0f);
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
+#ifdef _DEBUG
 	glEnable(GL_DEBUG_OUTPUT);
 	glDebugMessageCallback(MessageCallback, 0);
-}
-
-void updateWorldMatrix(glm::vec3 chunkLength) {
-	world = glm::mat4(1.0);
-	world = glm::translate(world, translate);
-	world = glm::scale(world, scale);
-
-	world = glm::translate(world, chunkLength * 0.5f);
-	world = glm::rotate(world, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-	world = glm::translate(world, -chunkLength * 0.5f);
+#endif
 }
 
 void updateViewMatrix() {

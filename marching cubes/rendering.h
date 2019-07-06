@@ -9,5 +9,5 @@ public:
 	uint program;
 	uint triangles;
 	void clear();
-	void draw(uint vao, glm::mat4 world, glm::mat4 view);
+	void draw(uint vao, glm::mat4 view);
 };

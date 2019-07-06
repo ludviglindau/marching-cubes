@@ -9,14 +9,14 @@ void Renderer::clear() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void Renderer::draw(uint vao, glm::mat4 world, glm::mat4 view)
-{
+void Renderer::draw(uint vao, glm::mat4 view) {
 	glUseProgram(program);
 	
-	glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(world));
-	glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(view));
 	glm::mat4 projection = glm::perspective(glm::radians(45.f), 1600.f / 900.f, 0.5f, 10000.f);
-	glUniformMatrix4fv(2, 1, GL_FALSE, glm::value_ptr(projection * view));
+	glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(projection * view));
+	glm::vec4 cameraPos = glm::inverse(view) * glm::vec4(0.0, 0.0, 0.0, 1.0);
+	glUniform3fv(1, 1, glm::value_ptr(glm::vec3(cameraPos)));
+
 	glBindVertexArray(vao);
 	glDrawArrays(GL_TRIANGLES, 0, triangles * 3);
 }

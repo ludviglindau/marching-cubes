@@ -9,7 +9,7 @@ void NoiseShader::draw(glm::ivec3 chunk)
 {
 	glUseProgram(program);
 	glActiveTexture(GL_TEXTURE0);
-	glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	glBindImageTexture(0, texture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA16F);
 	glUniform1f(0, seed);
 	glUniform1f(1, glfwGetTime());
 	glUniform1f(2, TEXTURE_SIZE);
@@ -24,7 +24,7 @@ void NoiseShader::createTexture()
 	glGenTextures(1, &texture);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_3D, texture);
-	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA32F, TEXTURE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE, 0, GL_RGBA, GL_FLOAT, 0);
+	glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA16F, TEXTURE_SIZE, TEXTURE_SIZE, TEXTURE_SIZE, 0, GL_RGBA, GL_FLOAT, 0);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP);

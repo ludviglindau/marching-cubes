@@ -1,13 +1,11 @@
-#version 460
+#version 450
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-layout(rgba32f, binding = 0) uniform image3D outTexture;
+layout(rgba16f, binding = 0) uniform image3D outTexture;
 
 layout(location = 0) uniform float seed;
 layout(location = 1) uniform float time;
 layout(location = 2) uniform float texels;
 layout(location = 3) uniform ivec3 chunk;
-
-float hash( float n ) { return fract(sin(n)*753.5453123); }
 
 vec3 random3(vec3 p)
 {
@@ -16,38 +14,6 @@ vec3 random3(vec3 p)
               dot(p, vec3(174.62, 544.25, 151.8542)));
     return -1.0 + 2.0 * fract(sin(p) * 12583.3602648 + (seed * 155.155));
 }
-
-vec4 noised( in vec3 x )
-{
-    vec3 p = floor(x);
-    vec3 w = fract(x);
-	vec3 u = w*w*(3.0-2.0*w);
-    vec3 du = 6.0*w*(1.0-w);
-    
-    float n = p.x + p.y*157.0 + 113.0*p.z;
-    
-    float a = hash(n+  0.0);
-    float b = hash(n+  1.0);
-    float c = hash(n+157.0);
-    float d = hash(n+158.0);
-    float e = hash(n+113.0);
-	float f = hash(n+114.0);
-    float g = hash(n+270.0);
-    float h = hash(n+271.0);
-	
-    float k0 =   a;
-    float k1 =   b - a;
-    float k2 =   c - a;
-    float k3 =   e - a;
-    float k4 =   a - b - c + d;
-    float k5 =   a - c - e + g;
-    float k6 =   a - b - e + f;
-    float k7 = - a + b + c - d + e - f - g + h;
-
-    return vec4( k0 + k1*u.x + k2*u.y + k3*u.z + k4*u.x*u.y + k5*u.y*u.z + k6*u.z*u.x + k7*u.x*u.y*u.z, 
-                 du * (vec3(k1,k2,k3) + u.yzx*vec3(k4,k5,k6) + u.zxy*vec3(k6,k4,k5) + k7*u.yzx*u.zxy ));
-}
-
 vec4 noise(vec3 p)
 {
     vec3 v = floor(p);
@@ -111,43 +77,36 @@ vec4 noise(vec3 p)
 vec4 fbm(vec3 p)
 {
 	p *= 1.5;
-	vec4 value = vec4(p.y * 0.0, 0.0, 2.0 * 0.0, 0.0);
+	vec4 value = vec4(p.y * 0.5, 0.0, 0.00001, 0.0);
+	mat3 rotate = mat3(cos(0.0), 0.0, sin(0.0),
+					   0.0     , 1.0, 0.0,
+					  -sin(0.0), 0.0, cos(0.0));
 
     value += noise(p) * 0.5;
-    value += noise(p*2.0) * 0.25 * vec4(1.0, 2.1, 1.9, 2.0);
-    value += noise(p*4.0) * 0.126 * vec4(1.0, 4.0, 4.1, 3.9);
-	value += noise(p*8.0) * 0.123 * 0.5 * vec4(1.0, 7.8, 8.2, 8.0);
-	value += noise(p*16.0) * 0.128 * 0.25 * vec4(1.0, 16.0, 16.0, 16.0);
+    value += noise(p*rotate*2.0) * 0.25 * vec4(1.0, 2.0, 2.0, 2.0);
+    value += noise(p*rotate*rotate*4.0) * 0.126 * vec4(1.0, 4.0, 4.0, 4.0);
+	value += noise(p*rotate*-8.0) * 0.06123 * vec4(1.0, 8.0, 8.0, 8.0);
+
+	float amp = 0.03125f;
+	float freq = 16.f;
+
+	for (int i = 0; i < 6; ++i) {
+		value += noise(p * freq) * amp * vec4(1.0, freq, freq, freq);
+		freq *= 2.0;
+		amp *= 0.5;
+	}
 
 	return value;
-}
-
-vec4 fbmd( in vec3 x )
-{
-    const float scale  = 1.5;
-
-    float a = 0.0;
-    float b = 0.5;
-	float f = 1.0;
-    vec3  d = vec3(0.0);
-    for( int i=0; i<8; i++ )
-    {
-        vec4 n = noised(f*x*scale);
-        a += b*n.x;           // accumulate values		
-        d += b*n.yzw*f*scale; // accumulate derivatives
-        b *= 0.5;             // amplitude decrease
-        f *= 1.8;             // frequency increase
-    }
-
-	return vec4( a, d );
 }
 
 void main()
 {
 	vec3 p = gl_GlobalInvocationID.xyz;
-	vec3 noiseInput = (p + (chunk * (texels - 1))) / (texels * 1.0);
+	vec3 noiseInput = (p + (chunk * (texels - 1))) / (texels * 2.0);
 	vec4 density = fbm(noiseInput);
+	//vec4 density = vec4(length(p - vec3(16.f)) - 16.f, 0.f, 0.f, 0.f);
+	//density.yzw = vec3(p - vec3(-16.f));
 	//density.x = (density.x - 0.4) * 0.7;
-	density.yzw = normalize(density.yzw);
+	//density.yzw = normalize(density.yzw);
 	imageStore(outTexture, ivec3(p), density);
 }
