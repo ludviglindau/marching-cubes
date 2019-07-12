@@ -12,7 +12,7 @@ void Renderer::clear() {
 void Renderer::draw(uint vao, glm::mat4 view) {
 	glUseProgram(program);
 	
-	glm::mat4 projection = glm::perspective(glm::radians(45.f), 1600.f / 900.f, 0.5f, 10000.f);
+	glm::mat4 projection = glm::perspective(glm::radians(45.f), 1600.f / 900.f, 0.5f, 10000000.f);
 	glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(projection * view));
 	glm::vec4 cameraPos = glm::inverse(view) * glm::vec4(0.0, 0.0, 0.0, 1.0);
 	glUniform3fv(1, 1, glm::value_ptr(glm::vec3(cameraPos)));

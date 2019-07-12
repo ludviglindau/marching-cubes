@@ -28,8 +28,8 @@ GLFWwindow* window;
 
 const int WINDOW_WIDTH = 1600;
 const int WINDOW_HEIGHT = 900;
-const int chunkRows = 12;
-const int chunkRowStart = -6;
+const int chunkRows = 14;
+const int chunkRowStart = -7;
 const int chunkCols = 7;
 const int chunkColStart = -3;
 
@@ -37,7 +37,7 @@ bool wireframeMode = false;
 
 struct Camera {
 	glm::vec2 rotation = glm::vec2(0.0f, 0.0f);
-	float distance = 1000.0f;
+	float distance = 10000.0f;
 } camera;
 
 glm::mat4 view = glm::mat4(1.0);
@@ -56,9 +56,10 @@ MessageCallback(
 
 int main()
 {
+	int totalTriangles = 0;
 	initWindow();
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CW);
 
@@ -78,6 +79,7 @@ int main()
 	createComputeShader(vertexGenShader.program, "vertexGen.glsl");
 	vertexGenShader.voxelDim = (NoiseShader::TEXTURE_SIZE - 1);
 	vertexGenShader.createBuffers();
+	vertexGenShader.scale = 40.0;
 
 	Renderer renderer;
 	createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");
@@ -87,9 +89,11 @@ int main()
 	
 	while (!glfwWindowShouldClose(window))
 	{
+		double dt = glfwGetTime();
 		glfwSetTime(0.0);
 		glfwPollEvents();
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+			totalTriangles = 0;
 			createComputeShader(noiseShaders[0].program, "noise.glsl");
 
 			for (int col = 0; col < chunkCols; ++col) {
@@ -104,22 +108,22 @@ int main()
 			createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");			
 		}
 		if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-			camera.rotation.x -= 0.01f;
+			camera.rotation.x -= 1.0f * dt;
 		}
 		if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-			camera.rotation.x += 0.01f;
+			camera.rotation.x += 1.0f * dt;
 		}
 		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-			camera.rotation.y = glm::clamp(camera.rotation.y + 0.01f, -1.62f, 1.62f);
+			camera.rotation.y = glm::clamp(camera.rotation.y + (1.f * (float)dt), -1.62f, 1.62f);
 		}
 		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-			camera.rotation.y = glm::clamp(camera.rotation.y - 0.01f, -1.62f, 1.62f);
+			camera.rotation.y = glm::clamp(camera.rotation.y - (1.f * (float)dt), -1.62f, 1.62f);
 		}
 		if (glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
-			camera.distance += 0.5f;
+			camera.distance += 150.5f * dt;
 		}
 		if (glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS) {
-			camera.distance -= 0.5f;
+			camera.distance -= 150.5f * dt;
 		}
 		if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
 			wireframeMode = !wireframeMode;
@@ -141,6 +145,7 @@ int main()
 				if (chunkRenderInfo.invalid) {
 					vertexGenShader.noiseTexture = noiseShaders[(col * (chunkRows*chunkRows)) + row].texture;
 					vertexGenShader.draw(chunk);
+					totalTriangles += vertexGenShader.nrOfTriangles;
 					//noiseShaders[(col * (chunkRows*chunkRows)) + row].destroyTexture();
 				}
 				renderer.triangles = chunkRenderInfo.triangleCount;
@@ -151,7 +156,7 @@ int main()
 
 		glfwSwapBuffers(window);
 		char title[40];
-		sprintf_s(title, 40, "%.3f ms", glfwGetTime()*1000);
+		sprintf_s(title, 40, "%.3f ms, %i triangles", glfwGetTime()*1000, totalTriangles);
 		glfwSetWindowTitle(window, title);
 	}
 	

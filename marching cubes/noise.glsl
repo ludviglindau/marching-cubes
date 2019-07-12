@@ -76,12 +76,13 @@ vec4 noise(vec3 p)
 
 vec4 fbm(vec3 p)
 {
-	p *= 0.5;
+	p *= 1.5;
 	vec4 value = vec4(p.y * 0.5, 0.0, 0.00001, 0.0);
 	mat3 rotate = mat3(cos(0.0), 0.0, sin(0.0),
 					   0.0     , 1.0, 0.0,
 					  -sin(0.0), 0.0, cos(0.0));
 
+	value += noise(p*0.5) * 1.5 * vec4(1.0, 0.5, 0.5, 0.5);
     value += noise(p) * 0.5;
     value += noise(p*rotate*2.0) * 0.25 * vec4(1.0, 2.0, 2.0, 2.0);
     value += noise(p*rotate*rotate*4.0) * 0.126 * vec4(1.0, 4.0, 4.0, 4.0);
