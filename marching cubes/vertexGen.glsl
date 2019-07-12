@@ -10,6 +10,13 @@ struct Triangle {
     vec4 n3;
 };
 
+struct DrawArraysIndirectCommand {
+	uint count;
+	uint instanceCount;
+	uint first;
+	uint baseInstance;
+};
+
 layout(std430, binding = 0) buffer TriangleBuffer
 {
 	Triangle triangles[];
@@ -30,10 +37,16 @@ layout(std430, binding = 3) readonly buffer TriangleTable
 	int triTable[256][16];
 };
 
+layout(std430, binding = 4) buffer DrawCommandBuffer
+{
+    DrawArraysIndirectCommand drawCommands[1];
+};
+
 layout(binding = 0) uniform sampler3D noiseTexture;
 layout(location = 0) uniform float voxelDim;
 layout(location = 1) uniform ivec3 chunk;
 layout(location = 2) uniform float scale;
+layout(location = 3) uniform uint drawCommandOffset;
 
 vec3 interpolateVertex(vec3 p1, vec3 p2, float val1, float val2) {
     vec3 p;
@@ -51,6 +64,9 @@ vec3 interpolateVertex(vec3 p1, vec3 p2, float val1, float val2) {
 
 void main()
 {
+    drawCommands[0].first = 0;
+    drawCommands[0].baseInstance = 0;
+    drawCommands[0].instanceCount = 1;
 	ivec3 p = ivec3(gl_GlobalInvocationID.xyz);
 	float corners[8];
 	const vec3 offsets[8] = vec3[8](
@@ -140,7 +156,7 @@ void main()
    
     memoryBarrier();
 	uint vboIndex = atomicAdd(counter[0], triangleCounter);
-    
+    atomicAdd(drawCommands[0].count, triangleCounter * 3);
 	for (int i = 0; i < triangleCounter; ++i)
 	{
 		triangles[vboIndex + i] = triangleList[i];

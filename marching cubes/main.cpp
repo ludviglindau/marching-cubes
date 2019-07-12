@@ -56,10 +56,9 @@ MessageCallback(
 
 int main()
 {
-	int totalTriangles = 0;
 	initWindow();
 	glEnable(GL_DEPTH_TEST);
-	//glEnable(GL_CULL_FACE);
+	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 	glFrontFace(GL_CW);
 
@@ -83,7 +82,6 @@ int main()
 
 	Renderer renderer;
 	createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");
-	renderer.triangles = vertexGenShader.nrOfTriangles;
 	view = glm::lookAt(glm::vec3(0.0, 0.0, 100.0), glm::vec3(0.0), glm::vec3(0.0, 1.0, 0.0));
 
 	
@@ -93,7 +91,6 @@ int main()
 		glfwSetTime(0.0);
 		glfwPollEvents();
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
-			totalTriangles = 0;
 			createComputeShader(noiseShaders[0].program, "noise.glsl");
 
 			for (int col = 0; col < chunkCols; ++col) {
@@ -102,7 +99,7 @@ int main()
 					noiseShaders[(col * (chunkRows*chunkRows)) + row].draw(glm::vec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart));
 				}
 			}
-			vertexGenShader.chunkRenderInfos = std::unordered_map<glm::ivec3, ChunkRenderInfo, KeyHash>();
+			vertexGenShader.clear();
 			createComputeShader(vertexGenShader.program, "vertexGen.glsl");
 
 			createShaderProgram(renderer.program, "vs.glsl", nullptr, nullptr, nullptr, "fs.glsl");			
@@ -137,7 +134,8 @@ int main()
 
 		renderer.clear();
 		updateViewMatrix();
-		
+		bool dirty = false;
+
 		for (int col = 0; col < chunkCols; ++col) {
 			for (int row = 0; row < chunkRows*chunkRows; row++) {
 				glm::ivec3 chunk = glm::ivec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart);
@@ -145,22 +143,23 @@ int main()
 				if (chunkRenderInfo.invalid) {
 					vertexGenShader.noiseTexture = noiseShaders[(col * (chunkRows*chunkRows)) + row].texture;
 					vertexGenShader.draw(chunk);
-					totalTriangles += vertexGenShader.nrOfTriangles;
 					//noiseShaders[(col * (chunkRows*chunkRows)) + row].destroyTexture();
+					dirty = true;
 				}
-				renderer.triangles = chunkRenderInfo.triangleCount;
-				glBindBuffer(GL_SHADER_STORAGE_BUFFER, chunkRenderInfo.vertexBuffer);
-				renderer.draw(chunkRenderInfo.vertexArray, view);
 			}
 		}
+		if (dirty) {
+			renderer.setRenderingState(vertexGenShader.bigVertexArray, vertexGenShader.drawCommandBuffer);
+		}
+		renderer.draw(view);
 
 		glfwSwapBuffers(window);
-		char title[40];
-		sprintf_s(title, 40, "%.3f ms, %i triangles", glfwGetTime()*1000, totalTriangles);
+		char title[80];
+		sprintf_s(title, 80, "%.3f ms, %i triangles", glfwGetTime()*1000, vertexGenShader.bigVertexBufferSize / triangleSize);
 		glfwSetWindowTitle(window, title);
 	}
 	
-	for (int i = 0; i < 16; i++) {
+	for (int i = 0; i < noiseShaders.size(); i++) {
 		noiseShaders[i].destroyTexture();
 	}
 	vertexGenShader.destroyBuffers();

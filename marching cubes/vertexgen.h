@@ -3,6 +3,14 @@
 #include <unordered_map>
 
 typedef unsigned int uint;
+constexpr uint triangleSize = sizeof(glm::vec4) * 6;
+
+typedef struct {
+	uint  count;
+	uint  instanceCount;
+	uint  first;
+	uint  baseInstance;
+} DrawArraysIndirectCommand;
 
 struct KeyHash {
 	uint operator()(const glm::ivec3& vec) const
@@ -21,10 +29,9 @@ private:
 public:
 	uint triangleCount = 0;
 	uint vertexBuffer = UINT_MAX;
-	uint vertexArray = UINT_MAX;
 	bool invalid = true;
 	void createBuffers(uint voxelDim);
-	void resizeBuffer();
+	void moveToBuffer(uint targetBuffer, uint& targetBufferSize);
 	void deleteBuffers();
 	~ChunkRenderInfo();
 };
@@ -38,10 +45,19 @@ public:
 	uint counterBuffer;
 	uint edgeTableBuffer;
 	uint triangleTableBuffer;
-	uint nrOfTriangles = 0;
+	
+	uint bigVertexBufferLength;
+	uint bigVertexBufferSize;
+	uint bigVertexBuffer;
+	uint bigVertexArray;
+	uint drawCommandIndex;
+	uint drawCommandBuffer;
 	std::unordered_map<glm::ivec3, ChunkRenderInfo, KeyHash> chunkRenderInfos;
+	
 	float scale = 2.0;
+	
 	void draw(glm::ivec3 chunk);
 	void createBuffers();
 	void destroyBuffers();
+	void clear();
 };

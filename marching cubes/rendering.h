@@ -7,7 +7,7 @@ class Renderer {
 private:
 public:
 	uint program;
-	uint triangles;
 	void clear();
-	void draw(uint vao, glm::mat4 view);
+	void setRenderingState(uint vao, uint drawCommandBuffer);
+	void draw(glm::mat4 view);
 };
