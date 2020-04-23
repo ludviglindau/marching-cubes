@@ -117,10 +117,10 @@ int main()
 			camera.rotation.y = glm::clamp(camera.rotation.y - (1.f * (float)dt), -1.62f, 1.62f);
 		}
 		if (glfwGetKey(window, GLFW_KEY_PERIOD) == GLFW_PRESS) {
-			camera.distance += 150.5f * dt;
+			camera.distance += 15000.f * dt;
 		}
 		if (glfwGetKey(window, GLFW_KEY_COMMA) == GLFW_PRESS) {
-			camera.distance -= 150.5f * dt;
+			camera.distance -= 15000.f * dt;
 		}
 		if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) {
 			wireframeMode = !wireframeMode;
@@ -135,7 +135,7 @@ int main()
 		renderer.clear();
 		updateViewMatrix();
 		bool dirty = false;
-
+		double startTime = glfwGetTime();
 		for (int col = 0; col < chunkCols; ++col) {
 			for (int row = 0; row < chunkRows*chunkRows; row++) {
 				glm::ivec3 chunk = glm::ivec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart);
@@ -148,7 +148,10 @@ int main()
 				}
 			}
 		}
+		double endTime = glfwGetTime();
+		
 		if (dirty) {
+			printf("%f\n", endTime - startTime);
 			renderer.setRenderingState(vertexGenShader.bigVertexArray, vertexGenShader.drawCommandBuffer);
 		}
 		renderer.draw(view);
