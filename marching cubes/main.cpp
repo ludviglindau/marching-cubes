@@ -143,7 +143,7 @@ int main()
 				if (chunkRenderInfo.invalid) {
 					vertexGenShader.noiseTexture = noiseShaders[(col * (chunkRows*chunkRows)) + row].texture;
 					vertexGenShader.draw(chunk);
-					//noiseShaders[(col * (chunkRows*chunkRows)) + row].destroyTexture();
+					noiseShaders[(col * (chunkRows*chunkRows)) + row].destroyTexture();
 					dirty = true;
 				}
 			}
