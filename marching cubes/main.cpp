@@ -28,10 +28,10 @@ GLFWwindow* window;
 
 const int WINDOW_WIDTH = 1600;
 const int WINDOW_HEIGHT = 900;
-const int chunkRows = 14;
-const int chunkRowStart = -7;
-const int chunkCols = 7;
-const int chunkColStart = -3;
+const int chunkHorizontal = 14;
+const int chunkHorizontalStart = -7;
+const int chunkVertical = 7;
+const int chunkVerticalStart = -3;
 
 bool wireframeMode = false;
 
@@ -63,14 +63,14 @@ int main()
 	glFrontFace(GL_CW);
 
 	std::vector<NoiseShader> noiseShaders;
-	noiseShaders.resize(chunkCols * chunkRows*chunkRows);
+	noiseShaders.resize(chunkVertical * chunkHorizontal*chunkHorizontal);
 	createComputeShader(noiseShaders[0].program, "noise.glsl");
 
-	for (int col = 0; col < chunkCols; ++col) {
-		for (int row = 0; row < chunkRows*chunkRows; ++row) {
-			noiseShaders[(col * (chunkRows*chunkRows)) + row].program = noiseShaders[0].program;
-			noiseShaders[(col * (chunkRows*chunkRows)) + row].createTexture();
-			noiseShaders[(col * (chunkRows*chunkRows)) + row].draw(glm::vec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart));
+	for (int col = 0; col < chunkVertical; ++col) {
+		for (int row = 0; row < chunkHorizontal*chunkHorizontal; ++row) {
+			noiseShaders[(col * (chunkHorizontal*chunkHorizontal)) + row].program = noiseShaders[0].program;
+			noiseShaders[(col * (chunkHorizontal*chunkHorizontal)) + row].createTexture();
+			noiseShaders[(col * (chunkHorizontal*chunkHorizontal)) + row].draw(glm::vec3((row % chunkHorizontal) + chunkHorizontalStart, chunkVerticalStart + col, (row / chunkHorizontal) + chunkHorizontalStart));
 		}
 	}
 	
@@ -93,10 +93,10 @@ int main()
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 			createComputeShader(noiseShaders[0].program, "noise.glsl");
 
-			for (int col = 0; col < chunkCols; ++col) {
-				for (int row = 0; row < chunkRows*chunkRows; ++row) {
-					noiseShaders[(col * (chunkRows*chunkRows)) + row].program = noiseShaders[0].program;
-					noiseShaders[(col * (chunkRows*chunkRows)) + row].draw(glm::vec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart));
+			for (int col = 0; col < chunkVertical; ++col) {
+				for (int row = 0; row < chunkHorizontal*chunkHorizontal; ++row) {
+					noiseShaders[(col * (chunkHorizontal*chunkHorizontal)) + row].program = noiseShaders[0].program;
+					noiseShaders[(col * (chunkHorizontal*chunkHorizontal)) + row].draw(glm::vec3((row % chunkHorizontal) + chunkHorizontalStart, chunkVerticalStart + col, (row / chunkHorizontal) + chunkHorizontalStart));
 				}
 			}
 			vertexGenShader.clear();
@@ -136,14 +136,14 @@ int main()
 		updateViewMatrix();
 		bool dirty = false;
 		double startTime = glfwGetTime();
-		for (int col = 0; col < chunkCols; ++col) {
-			for (int row = 0; row < chunkRows*chunkRows; row++) {
-				glm::ivec3 chunk = glm::ivec3((row % chunkRows) + chunkRowStart, chunkColStart + col, (row / chunkRows) + chunkRowStart);
+		for (int col = 0; col < chunkVertical; ++col) {
+			for (int row = 0; row < chunkHorizontal*chunkHorizontal; row++) {
+				glm::ivec3 chunk = glm::ivec3((row % chunkHorizontal) + chunkHorizontalStart, chunkVerticalStart + col, (row / chunkHorizontal) + chunkHorizontalStart);
 				ChunkRenderInfo& chunkRenderInfo = vertexGenShader.chunkRenderInfos[chunk];
 				if (chunkRenderInfo.invalid) {
-					vertexGenShader.noiseTexture = noiseShaders[(col * (chunkRows*chunkRows)) + row].texture;
+					vertexGenShader.noiseTexture = noiseShaders[(col * (chunkHorizontal*chunkHorizontal)) + row].texture;
 					vertexGenShader.draw(chunk);
-					noiseShaders[(col * (chunkRows*chunkRows)) + row].destroyTexture();
+					noiseShaders[(col * (chunkHorizontal*chunkHorizontal)) + row].destroyTexture();
 					dirty = true;
 				}
 			}
