@@ -1,7 +1,7 @@
 # marching-cubes
 OpenGL implementation of marching cubes
 
-To run: copy glew32.dll into .exe directory and make sure the working directory contains shader files.
+To run: Compile with Visual Studio then copy glew32.dll into .exe directory and make sure the working directory contains shader files.
 
 Program does 3D noise texture generation and polygonization on the GPU.
 GPU buffers are compacted after polygonization and indirect draw is used for the OpenGL draw call.
